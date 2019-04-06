@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { of, concat, interval, merge } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { createCancellableHttpObservable } from '../common/util';
 
 @Component({
     selector: 'about',
@@ -14,7 +15,8 @@ export class AboutComponent implements OnInit {
     ngOnInit() {
         // this.p14_concatenation();
         // this.p17_merge();
-        this.p10_unsubscription()
+        // this.p10_unsubscription();
+        this.p10_unsubscription2();
     }
 
     p14_concatenation() {
@@ -38,4 +40,9 @@ export class AboutComponent implements OnInit {
         setTimeout(() => sub.unsubscribe(), 5000);
     }
 
+    p10_unsubscription2() {
+        const http$ = createCancellableHttpObservable("/api/courses");
+        const sub = http$.subscribe(console.log);
+        setTimeout(() => sub.unsubscribe(), 0);
+    }
 }
