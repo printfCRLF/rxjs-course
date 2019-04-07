@@ -11,7 +11,7 @@ import {
     concatMap,
     switchMap,
     withLatestFrom,
-    concatAll, shareReplay, debounce
+    concatAll, shareReplay, debounce, throttleTime
 } from 'rxjs/operators';
 import { merge, fromEvent, Observable, concat } from 'rxjs';
 import { Lesson } from '../model/lesson';
@@ -42,6 +42,12 @@ export class CourseComponent implements OnInit, AfterViewInit {
     }
 
     ngAfterViewInit() {
+        // this.p22_search_typeahead();
+        // this.p28_startWith();
+        this.p29_throttling_vs_debouncing();
+    }
+
+    p22_search_typeahead() {
         const searchLessons$ = fromEvent<any>(this.input.nativeElement, "keyup")
             .pipe(
                 debounceTime(400),
@@ -52,6 +58,28 @@ export class CourseComponent implements OnInit, AfterViewInit {
 
         const initialLessons$ = this.loadLessons();
         this.lessons$ = concat(initialLessons$, searchLessons$);
+    }
+
+    p28_startWith() {
+        this.lessons$ = fromEvent<any>(this.input.nativeElement, "keyup")
+            .pipe(
+                map(event => event.target.value),
+                startWith(""),
+                debounceTime(400),
+                distinctUntilChanged(),
+                switchMap(search => this.loadLessons(search))
+            );
+    }
+
+    p29_throttling_vs_debouncing() {
+        this.lessons$ = fromEvent<any>(this.input.nativeElement, "keyup")
+            .pipe(
+                map(event => event.target.value),
+                startWith(""),
+                throttleTime(400),
+                distinctUntilChanged(),
+                switchMap(search => this.loadLessons(search))
+            );
     }
 
     loadLessons(search = ""): Observable<Lesson[]> {

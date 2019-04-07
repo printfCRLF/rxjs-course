@@ -4,7 +4,11 @@ export function createHttpObservable(url: string) {
     return Observable.create(observer => {
         fetch(url)
             .then(response => {
-                return response.json();
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    observer.error(`${response.status} - ${response.statusText}`);
+                }
             })
             .then(body => {
                 observer.next(body);
