@@ -1,6 +1,6 @@
-import {AfterViewInit, Component, ElementRef, OnInit, ViewChild} from '@angular/core';
-import {ActivatedRoute} from "@angular/router";
-import {Course} from "../model/course";
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ActivatedRoute } from "@angular/router";
+import { Course } from "../model/course";
 import {
     debounceTime,
     distinctUntilChanged,
@@ -11,11 +11,12 @@ import {
     concatMap,
     switchMap,
     withLatestFrom,
-    concatAll, shareReplay
+    concatAll, shareReplay, first, take
 } from 'rxjs/operators';
-import {merge, fromEvent, Observable, concat} from 'rxjs';
-import {Lesson} from '../model/lesson';
-import {createHttpObservable} from '../common/util';
+import { merge, fromEvent, Observable, concat, forkJoin } from 'rxjs';
+import { Lesson } from '../model/lesson';
+import { createHttpObservable } from '../common/util';
+import { Store } from '../common/store.service';
 
 
 @Component({
@@ -25,31 +26,51 @@ import {createHttpObservable} from '../common/util';
 })
 export class CourseComponent implements OnInit, AfterViewInit {
 
-    courseId:string;
-
-    course$ : Observable<Course>;
-
+    courseId: number;
+    course$: Observable<Course>;
     lessons$: Observable<Lesson[]>;
-
 
     @ViewChild('searchInput') input: ElementRef;
 
-    constructor(private route: ActivatedRoute) {
-
-
+    constructor(private route: ActivatedRoute,
+        private store: Store) {
     }
 
     ngOnInit() {
+        // this.p41_forceLongRunningObservablesToComplete();
+        this.p42_withLatestFrom();
+    }
 
+    p41_forceLongRunningObservablesToComplete() {
         this.courseId = this.route.snapshot.params['id'];
+        this.course$ = this.store.selectCourseById(this.courseId)
+            .pipe(
+                // first()
+                take(1)
+            );
 
-        this.course$ = createHttpObservable(`/api/courses/${this.courseId}`);
+        forkJoin(this.course$, this.loadLessons())
+            .subscribe(console.log);
+    }
 
+    p42_withLatestFrom() {
+        this.courseId = this.route.snapshot.params['id'];
+        this.course$ = this.store.selectCourseById(this.courseId);
+
+        this.loadLessons()
+            .pipe(
+                withLatestFrom(this.course$)
+            )
+            .subscribe(
+                ([lessons, course]) => {
+                    console.log(`lessons`, lessons);
+                    console.log(`course`, course);
+                }
+            );
     }
 
     ngAfterViewInit() {
-
-        const searchLessons$ =  fromEvent<any>(this.input.nativeElement, 'keyup')
+        const searchLessons$ = fromEvent<any>(this.input.nativeElement, 'keyup')
             .pipe(
                 map(event => event.target.value),
                 debounceTime(400),
@@ -58,9 +79,7 @@ export class CourseComponent implements OnInit, AfterViewInit {
             );
 
         const initialLessons$ = this.loadLessons();
-
         this.lessons$ = concat(initialLessons$, searchLessons$);
-
     }
 
     loadLessons(search = ''): Observable<Lesson[]> {
@@ -71,16 +90,4 @@ export class CourseComponent implements OnInit, AfterViewInit {
             );
     }
 
-
 }
-
-
-
-
-
-
-
-
-
-
-
